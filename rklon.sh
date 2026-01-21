@@ -75,33 +75,35 @@ sudo chown -R www:www /www/wwwroot/$SUBDOMAIN
 # --- Bagian 5: Buat Layanan Systemd yang Telah Diperbaiki ---
 
 echo "Membuat layanan systemd yang stabil..."
-sudo bash -c "cat > /etc/systemd/system/rclone.service <<EOL
+
+# Kita gunakan cara ini agar variabel terevaluasi dengan benar tanpa masalah spasi
+cat <<EOL | sudo tee /etc/systemd/system/rclone.service > /dev/null
 [Unit]
 Description=Rclone Mount Service for ${RCLONE_REMOTE_NAME}
 After=network-online.target
 
 [Service]
 Type=notify
-ExecStart=/usr/bin/rclone mount ${RCLONE_REMOTE_NAME}:${DRIVE_ROOT_FOLDER} /mnt/gdrive \\
-    --config /etc/rclone/rclone.conf \\
-    --vfs-cache-mode full \\
-    --cache-dir /opt/rclone_cache \\
-    --vfs-cache-max-size ${CACHE_SIZE} \\
-    --vfs-cache-max-age 72h \\
-    --vfs-cache-poll-interval 1m \\
-    --vfs-read-ahead 64M \\
-    --buffer-size 32M \\
-    --vfs-read-chunk-size 16M \\
-    --vfs-read-chunk-size-limit 256M \\
-    --drive-chunk-size 32M \\
-    --dir-cache-time 1000h \\
-    --attr-timeout 1000h \\    
-    --allow-other \\
-    --uid ${WWW_UID} \\
-    --gid ${WWW_GID} \\
-    --rc \\
+ExecStart=/usr/bin/rclone mount ${RCLONE_REMOTE_NAME}:${DRIVE_ROOT_FOLDER} /mnt/gdrive \
+    --config /etc/rclone/rclone.conf \
+    --vfs-cache-mode full \
+    --cache-dir /opt/rclone_cache \
+    --vfs-cache-max-size ${CACHE_SIZE} \
+    --vfs-cache-max-age 72h \
+    --vfs-cache-poll-interval 1m \
+    --vfs-read-ahead 64M \
+    --buffer-size 32M \
+    --vfs-read-chunk-size 16M \
+    --vfs-read-chunk-size-limit 256M \
+    --drive-chunk-size 32M \
+    --dir-cache-time 1000h \
+    --attr-timeout 1000h \
+    --allow-other \
+    --uid ${WWW_UID} \
+    --gid ${WWW_GID} \
+    --rc \
     --rc-addr :5572
-ExecStop=/bin/fusermount -u /mnt/gdrive
+ExecStop=/bin/fusermount -uz /mnt/gdrive
 Restart=always
 RestartSec=10
 User=www
@@ -109,7 +111,7 @@ Group=www
 
 [Install]
 WantedBy=multi-user.target
-EOL"
+EOL
 
 echo "Reload daemon dan memulai layanan rclone..."
 sudo systemctl daemon-reload
